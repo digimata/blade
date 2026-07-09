@@ -1,0 +1,43 @@
+{
+  "_metadata": {
+    "major_version": 2,
+    "minor_version": 1
+  },
+  "display_information": {
+    "name": "blade",
+    "description": "Pushes Slack messages into a running Claude Code session.",
+    "long_description": "blade is a Claude Code channel. Messages posted by allowlisted senders are pushed into a Claude Code session already running on a local machine, where Claude can act on the developer's real files and working state, then answer back in the same thread. Unlike a hosted assistant, no code or context leaves the machine the session runs on.",
+    "background_color": "#1a1a1a"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "blade",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "channels:history",
+        "groups:history",
+        "im:history"
+      ]
+    }
+  },
+  "settings": {
+    "socket_mode_enabled": true,
+    "event_subscriptions": {
+      "bot_events": [
+        "message.channels",
+        "message.groups",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": false
+    },
+    "org_deploy_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
