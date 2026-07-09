@@ -21,7 +21,15 @@ Creating the app cannot be scripted. Slack has no API to mint an app-level token
 1. **Create the app from the manifest.** At [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From an app manifest**. Pick the workspace, paste the contents of `manifest.json`, create. That sets Socket Mode, the bot user, the four scopes, and the three event subscriptions — no checkboxes.
 2. **Generate the app-level token.** **Basic Information** → **App-Level Tokens** → **Generate Token and Scopes**. Name it anything, add the `connections:write` scope. That's your `SLACK_APP_TOKEN` (starts `xapp-`). It is shown once.
 3. **Install to the workspace.** **Install App** → **Install to Workspace** → Allow. Copy the **Bot User OAuth Token**. That's your `SLACK_BOT_TOKEN` (starts `xoxb-`).
-4. **Invite the bot** to whichever channel you want it in: `/invite @blade`. Without this it receives nothing from that channel.
+4. **Add the bot to a channel.** For public channels blade joins itself, and grants Claude the right to post there. Do this after step 6, since it needs the token:
+
+```sh
+bun run join --list         # every channel; * marks the ones blade is in
+bun run join engineering    # join #engineering, add it to postTo
+bun run join eng --no-post  # join without granting posting rights
+```
+
+Private channels are the exception: Slack has no API to self-join one, so someone inside must `/invite @blade`.
 One Slack app per person.** Socket Mode distributes events across open connections rather than broadcasting to all of them, so two people sharing one app token would each receive a random half of the messages. That failure presents as intermittent, not obvious.
 5. **Allowlist yourself.** Find your Slack member ID (profile → ⋮ → Copy member ID; it looks like `U01ABCDEF`).
 

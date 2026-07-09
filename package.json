@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "start": "bun src/slack.ts",
+    "join": "bun src/join.ts",
     "test:mcp": "bun test/test-mcp.ts"
   },
   "devDependencies": {
