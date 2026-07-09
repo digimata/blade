@@ -13,7 +13,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { SocketModeClient } from '@slack/socket-mode'
 import { WebClient } from '@slack/web-api'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { z } from 'zod'
@@ -21,10 +21,38 @@ import { type Access, makeDeduper, shouldForward } from './filter'
 
 const STATE_DIR = process.env.BLADE_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'blade-slack')
 const ACCESS_FILE = join(STATE_DIR, 'access.json')
+const ENV_FILE = join(STATE_DIR, '.env')
 const RELAY_PERMISSIONS = process.env.BLADE_PERMISSION_RELAY === '1'
 const CHUNK_LIMIT = 3800 // Slack accepts 40k, but renders long messages badly.
 
 const warn = (...msg: unknown[]) => process.stderr.write(`[blade] ${msg.map(String).join(' ')}\n`)
+
+/**
+ * Read tokens from the state dir so they never have to live in ~/.claude.json.
+ * A real environment variable always wins, which keeps CI and one-off runs simple.
+ */
+function loadEnvFile(path: string) {
+  let raw: string
+  try {
+    // The file holds credentials. Lock it to the owner rather than warning
+    // about it. No-op on Windows, which would need ACLs.
+    chmodSync(path, 0o600)
+    raw = readFileSync(path, 'utf8')
+  } catch {
+    return
+  }
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const value = trimmed.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '')
+    if (!(key in process.env)) process.env[key] = value
+  }
+}
+
+loadEnvFile(ENV_FILE)
 
 /** The Slack SDK's default logger writes to stdout, which would corrupt the MCP stream. */
 const stderrLogger = {

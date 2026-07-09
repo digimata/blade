@@ -34,21 +34,31 @@ EOF
 
 It is re-read on every message, so edits take effect without restarting the session.
 
-**6. Register the MCP server.** Add to `~/.claude.json` so it resolves from any project (absolute path required):
+**6. Store the tokens.** They go in the state dir, never in `~/.claude.json`:
+
+```sh
+cat > ~/.claude/channels/blade-slack/.env <<'EOF'
+SLACK_APP_TOKEN=xapp-...
+SLACK_BOT_TOKEN=xoxb-...
+EOF
+```
+
+The server `chmod 600`s this file on every read. A real environment variable of the same name always wins, which keeps one-off runs simple.
+
+**7. Register the MCP server.** Add to `~/.claude.json` so it resolves from any project (absolute path required). No secrets here:
 
 ```json
 {
   "mcpServers": {
     "slack": {
       "command": "bun",
-      "args": ["/Users/you/Documents/digimata/projects/.misc/blade/src/slack.ts"],
-      "env": { "SLACK_APP_TOKEN": "xapp-...", "SLACK_BOT_TOKEN": "xoxb-..." }
+      "args": ["/Users/you/Documents/digimata/projects/.misc/blade/src/slack.ts"]
     }
   }
 }
 ```
 
-**7. Run.** Custom channels are not on Anthropic's curated allowlist, so the development flag is required:
+**8. Run.** Custom channels are not on Anthropic's curated allowlist, so the development flag is required:
 
 ```sh
 claude --dangerously-load-development-channels server:slack
