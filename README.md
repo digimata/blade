@@ -73,33 +73,33 @@ Bot tokens are workspace-scoped, so covering two workspaces means two Slack apps
 ```json
 {
   "mcpServers": {
-    "slack-adrata": {
+    "slack-acme": {
       "command": "bun",
       "args": ["/abs/path/blade/src/slack.ts"],
       "env": {
-        "BLADE_CHANNEL_NAME": "slack-adrata",
-        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-adrata"
+        "BLADE_CHANNEL_NAME": "slack-acme",
+        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-acme"
       }
     },
-    "slack-quartile": {
+    "slack-globex": {
       "command": "bun",
       "args": ["/abs/path/blade/src/slack.ts"],
       "env": {
-        "BLADE_CHANNEL_NAME": "slack-quartile",
-        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-quartile"
+        "BLADE_CHANNEL_NAME": "slack-globex",
+        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-globex"
       }
     }
   }
 }
 ```
 
-Each state dir holds its own `.env` and `access.json`. Run both in one session:
+Each state dir holds its own `.env` and `access.json`. Your member ID differs per workspace, so each `access.json` needs the ID from that workspace. Run both in one session:
 
 ```sh
-claude --dangerously-load-development-channels server:slack-adrata server:slack-quartile
+claude --dangerously-load-development-channels server:slack-acme server:slack-globex
 ```
 
-Messages then arrive tagged `source="slack-adrata"` or `source="slack-quartile"`, and every event carries a `team` attribute naming the workspace. Without distinct `BLADE_CHANNEL_NAME` values both servers announce themselves as `slack` and Claude cannot tell the workspaces apart.
+Messages then arrive tagged `source="slack-acme"` or `source="slack-globex"`, and every event carries a `team` attribute naming the workspace. Without distinct `BLADE_CHANNEL_NAME` values both servers announce themselves as `slack` and Claude cannot tell the workspaces apart.
 
 ## Access control
 
