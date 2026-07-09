@@ -6,7 +6,15 @@
  * channel and prompt injection of this session.
  */
 
-export type Access = { allowFrom: string[]; allowChannels?: string[] }
+export type Access = {
+  /** Slack member IDs whose messages may reach the session. */
+  allowFrom: string[]
+  /** If set, inbound is further restricted to these channels. */
+  allowChannels?: string[]
+  /** Channels Claude may post into unprompted. Separate from inbound: granting
+   *  the right to speak somewhere must not change what we listen to. */
+  postTo?: string[]
+}
 
 export type SlackMessage = {
   user?: string
@@ -32,6 +40,21 @@ export function makeDeduper(capacity = 1000) {
     if (order.length > capacity) seen.delete(order.shift()!)
     return false
   }
+}
+
+/**
+ * Whether Claude may post into a channel.
+ *
+ * Two ways to earn it: the channel sent us an allowed message during this
+ * process's lifetime, or it is named in `postTo`, a file only the operator can
+ * write. The second is what permits unprompted posts.
+ *
+ * Injected text can therefore talk Claude into posting to a channel already on
+ * the list, but not into one that isn't. That bound is the point.
+ */
+export function canPostTo(channel: string, seen: ReadonlySet<string>, access: Access): boolean {
+  if (seen.has(channel)) return true
+  return access.postTo?.includes(channel) ?? false
 }
 
 export function shouldForward(event: SlackMessage, access: Access, selfUserId: string): boolean {

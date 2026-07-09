@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type Access, makeDeduper, shouldForward } from '../src/filter'
+import { type Access, canPostTo, makeDeduper, shouldForward } from '../src/filter'
 
 const SELF = 'U_ME'
 const access: Access = { allowFrom: ['U_ANDREW', 'U_ROSS'] }
@@ -67,6 +67,53 @@ describe('shouldForward', () => {
     test('is not applied when unset', () => {
       expect(forward({ user: 'U_ROSS', channel: 'C_ANYTHING' })).toBe(true)
     })
+  })
+})
+
+describe('canPostTo', () => {
+  const none: Access = { allowFrom: [] }
+
+  test('a channel that messaged us this session is postable', () => {
+    expect(canPostTo('C1', new Set(['C1']), none)).toBe(true)
+  })
+
+  test('an unseen channel is refused when allowChannels is unset', () => {
+    expect(canPostTo('C_OTHER', new Set(['C1']), none)).toBe(false)
+  })
+
+  test('postTo permits an unprompted post', () => {
+    // The feature: Claude can start a conversation in a channel the operator named.
+    expect(canPostTo('C_OPS', new Set(), { allowFrom: [], postTo: ['C_OPS'] })).toBe(true)
+  })
+
+  test('postTo does not widen to channels it omits', () => {
+    // The bound: injected text can talk Claude into posting to C_OPS, never to C_SECRET.
+    expect(canPostTo('C_SECRET', new Set(), { allowFrom: [], postTo: ['C_OPS'] })).toBe(false)
+  })
+
+  test('an empty postTo list grants nothing', () => {
+    expect(canPostTo('C_OPS', new Set(), { allowFrom: [], postTo: [] })).toBe(false)
+  })
+
+  test('seen-inbound still wins when postTo omits the channel', () => {
+    // Someone allowlisted DMs us; we must be able to answer without the operator
+    // having predicted that DM's channel id, or the bot looks broken.
+    expect(canPostTo('D_DM', new Set(['D_DM']), { allowFrom: [], postTo: ['C_OPS'] })).toBe(true)
+  })
+
+  test('allowChannels is an inbound filter and grants no posting rights', () => {
+    // The bug this split fixes: one key must not mean two things.
+    expect(canPostTo('C_OPS', new Set(), { allowFrom: [], allowChannels: ['C_OPS'] })).toBe(false)
+  })
+})
+
+describe('the two lists are independent', () => {
+  test('granting postTo does not narrow inbound', () => {
+    // Before the split, setting a channel to post into silently stopped DMs
+    // from arriving, because the same key filtered inbound.
+    const access: Access = { allowFrom: ['U_ROSS'], postTo: ['C_OPS'] }
+    expect(shouldForward({ user: 'U_ROSS', channel: 'D_DM' }, access, SELF)).toBe(true)
+    expect(canPostTo('C_OPS', new Set(), access)).toBe(true)
   })
 })
 

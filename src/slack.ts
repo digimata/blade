@@ -17,7 +17,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { type Access, makeDeduper, shouldForward } from './filter'
+import { type Access, canPostTo, makeDeduper, shouldForward } from './filter'
 
 const STATE_DIR = process.env.BLADE_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'blade-slack')
 const ACCESS_FILE = join(STATE_DIR, 'access.json')
@@ -78,7 +78,7 @@ const stderrLogger = {
 function loadAccess(): Access {
   try {
     const raw = JSON.parse(readFileSync(ACCESS_FILE, 'utf8'))
-    return { allowFrom: raw.allowFrom ?? [], allowChannels: raw.allowChannels }
+    return { allowFrom: raw.allowFrom ?? [], allowChannels: raw.allowChannels, postTo: raw.postTo }
   } catch {
     return { allowFrom: [] }
   }
@@ -145,7 +145,9 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'reply',
-      description: 'Send a message back to Slack. Pass chat_id and thread_ts from the inbound channel tag.',
+      description:
+        'Send a message to Slack. To answer someone, pass chat_id and thread_ts from the inbound channel tag. ' +
+        'To post unprompted, pass a chat_id the operator has permitted and omit thread_ts.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -166,8 +168,10 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
     text: string
     thread_ts?: string
   }
-  // Outbound gate: only conversations that have already reached us inbound.
-  if (!replyable.has(chat_id)) throw new Error(`refusing to post to unseen channel: ${chat_id}`)
+  // Re-read so an operator can grant a channel without restarting the session.
+  if (!canPostTo(chat_id, replyable, loadAccess())) {
+    throw new Error(`refusing to post to ${chat_id}: not seen inbound, and not in allowChannels`)
+  }
   await post(chat_id, text, thread_ts)
   return { content: [{ type: 'text', text: 'sent' }] }
 })

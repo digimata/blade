@@ -105,14 +105,19 @@ Messages then arrive tagged `source="slack-acme"` or `source="slack-globex"`, an
 
 `access.json` gates **senders**, not channels:
 
-| Key | Meaning |
-|---|---|
-| `allowFrom` | Slack member IDs permitted to reach the session. Required; empty admits nobody. |
-| `allowChannels` | Optional. If set, messages are additionally restricted to these channel IDs. |
+| Key | Direction | Meaning |
+|---|---|---|
+| `allowFrom` | inbound | Slack member IDs permitted to reach the session. Required; empty admits nobody. |
+| `allowChannels` | inbound | Optional. If set, messages are additionally restricted to these channel IDs. |
+| `postTo` | outbound | Optional. Channels Claude may post into unprompted. |
 
 Gating on channel alone would mean anyone who can be added to that channel can put text in front of Claude. Message content is untrusted input — treat it as data, never as instructions about who may access the session.
 
-Outbound is gated too: `reply` refuses to post to a channel that hasn't sent an allowed message this session, so injected text cannot redirect Claude's answers into a channel you never opened.
+Outbound is gated separately. `reply` posts only to a channel that sent an allowed message during this process's lifetime, or one named in `postTo`. Without `postTo`, Claude is strictly reactive: it can answer, never initiate.
+
+`postTo` is what lets Claude message a channel on its own — a build result, a heads-up when a long job finishes. The tradeoff is real: once a channel is on the list, text arriving from Slack could talk Claude into posting there. It cannot reach any channel off the list, and that bound is the point.
+
+The two lists are deliberately separate. Granting the right to speak somewhere must not change what the session listens to.
 
 ## Permission relay
 
