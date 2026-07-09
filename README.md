@@ -66,6 +66,41 @@ claude --dangerously-load-development-channels server:slack
 
 A dim notice under the banner confirms it registered. Post in the channel; it arrives in your session.
 
+## Multiple workspaces
+
+Bot tokens are workspace-scoped, so covering two workspaces means two Slack apps and two channel servers. Give each its own name and state directory:
+
+```json
+{
+  "mcpServers": {
+    "slack-adrata": {
+      "command": "bun",
+      "args": ["/abs/path/blade/src/slack.ts"],
+      "env": {
+        "BLADE_CHANNEL_NAME": "slack-adrata",
+        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-adrata"
+      }
+    },
+    "slack-quartile": {
+      "command": "bun",
+      "args": ["/abs/path/blade/src/slack.ts"],
+      "env": {
+        "BLADE_CHANNEL_NAME": "slack-quartile",
+        "BLADE_STATE_DIR": "/Users/you/.claude/channels/blade-slack-quartile"
+      }
+    }
+  }
+}
+```
+
+Each state dir holds its own `.env` and `access.json`. Run both in one session:
+
+```sh
+claude --dangerously-load-development-channels server:slack-adrata server:slack-quartile
+```
+
+Messages then arrive tagged `source="slack-adrata"` or `source="slack-quartile"`, and every event carries a `team` attribute naming the workspace. Without distinct `BLADE_CHANNEL_NAME` values both servers announce themselves as `slack` and Claude cannot tell the workspaces apart.
+
 ## Access control
 
 `access.json` gates **senders**, not channels:
